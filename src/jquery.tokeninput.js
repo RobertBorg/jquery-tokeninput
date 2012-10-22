@@ -19,6 +19,7 @@ var DEFAULT_SETTINGS = {
     propertyToSearch: "name",
     jsonContainer: null,
     contentType: "json",
+    functionReturnsJson: false,
 
     // Prepopulation settings
     prePopulate: null,
@@ -184,9 +185,8 @@ $.TokenList = function (input, url_or_data, settings) {
     //
     // Initialization
     //
-
     // Configure the data source
-    if($.type(url_or_data) === "string" || $.type(url_or_data) === "function") {
+    if($.type(url_or_data) === "string" || ($.type(url_or_data) === "function" && ! $(input).data("settings").functionReturnsJson )) {
         // Set the url to query against
         $(input).data("settings").url = url_or_data;
 
@@ -201,9 +201,11 @@ $.TokenList = function (input, url_or_data, settings) {
                 $(input).data("settings").crossDomain = (location.href.split(/\/+/g)[1] !== url.split(/\/+/g)[1]);
             }
         }
-    } else if(typeof(url_or_data) === "object") {
+    } else if(typeof(url_or_data) === "object"  ) {
         // Set the local data to search through
         $(input).data("settings").local_data = url_or_data;
+    } else if ($.type(url_or_data) === "function"){
+        $(input).data("settings").queryCalle = url_or_data;
     }
 
     // Build class names
@@ -958,6 +960,20 @@ $.TokenList = function (input, url_or_data, settings) {
                     results = $(input).data("settings").onResult.call(hidden_input, results);
                 }
                 populate_dropdown(query, results);
+            } else if ($(input).data("settings").queryCalle) {
+
+
+                var results = $(input).data("settings").queryCalle(query, $(input).data("settings").propertyToSearch);
+
+                cache.add(cache_key, $(input).data("settings").jsonContainer ? results[$(input).data("settings").jsonContainer] : results);
+                if($.isFunction($(input).data("settings").onResult)) {
+                    results = $(input).data("settings").onResult.call(hidden_input, results);
+                }
+
+                // only populate the dropdown if the results are associated with the active search query
+                if(input_box.val() === query) {
+                    populate_dropdown(query, $(input).data("settings").jsonContainer ? results[$(input).data("settings").jsonContainer] : results);
+                }
             }
         }
     }
